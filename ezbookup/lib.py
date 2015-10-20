@@ -13,18 +13,26 @@ import re
 import os
 import shutil
 import sys
-import evilupload
-from evilupload import evilupload
+
 from cStringIO import StringIO
 from html2bbcode.parser import HTML2BBCode
 from robobrowser import RoboBrowser
-import threading
 from goto import with_goto
 from subprocess import Popen, PIPE
+
+from evilupload import evilupload
+from hide import hide
 
 AMAZON_URL = 'http://www.amazon.com/gp/product/'
 ezup = evilupload()
 br = RoboBrowser(history=True, user_agent='Mozilla/5.0 (Windows NT 6.1; rv:30.0) Gecko/20100101 Firefox/30.0')
+
+ezbookup_folder = os.path.expanduser('~')+'/' + hide('ezbookup')
+bbcodedir = ezbookup_folder + 'bbcode'
+if not os.path.isdir(ezbookup_folder):
+    os.makedirs(ezbookup_folder)
+    os.makedir(bbcodedir)
+
 
 def login(name=None, passwd=None):
     ''''Logs into https://evilzone.org and returns a working cookies'''
@@ -197,7 +205,7 @@ def generateBBCode(upUrl, info, filename):
 
 def getBooksIndex():
     secInAweek = 604800
-    indexfile = 'books_index.txt'
+    indexfile = ezbookup_folder+'books_index.txt'
     #this nonsense here is to notgrab the index everytime, thewormkill doesn't update it that much.
     #feel free to coment out this try block if you need it updated everytime.
     try:
@@ -217,7 +225,7 @@ def getBooksIndex():
     if os.path.exists(indexfile):
         os.remove(indexfile)
 
-    with open('books_index.txt', 'w+') as f:
+    with open((ezbookup_folder+'books_index.txt'), 'w+') as f:
         f.write(time.mktime(time.localtime()))
 
     for link in br.find_all("a"):
@@ -233,7 +241,7 @@ def getBooksIndex():
                url == 'https://evilzone.org/wiki//index.php?title=The_big_ebook_index&oldid=1775':
                 continue
             title = link.text
-            with open('books_index.txt', 'a+') as f:
+            with open((ezbookup_folder+'books_index.txt'), 'a+') as f:
                 f.write(str((link.text).encode('utf-8'))+' , '+ str((url).encode('utf-8'))+'\n')
 
 def convert2pdf(filename):
@@ -248,45 +256,59 @@ def convert2pdf(filename):
                 ' Please install Calibre and continue.',file=sys.stderr)
         sys.exit()
 
-def copyfile(filename,folder):
-    if not os.path.exists(folder):
-        os.makedir(folder) 
-    try:
-        shutil.move(filename, "%s/"%folder)
-    except:
-        filenm, ext = os.path.splitext(filename)
-        for num in range(1000):
-            if (not os.path.exists("%/"%folder+filenm+str(num)+ext)):
-                shutil.move(filename, "%s/"%folder+filenm+str(num)+ext)
-                break
+#def copyfiles(filename,folder):
+#    if not os.path.exists(folder):
+#        os.makedir(folder) 
+#    try:
+#        shutil.move(filename, "%s/"%folder)
+#    except:
+#        filenm, ext = os.path.splitext(filename)
+#        for num in range(1000):
+#            if (not os.path.exists("%/"%folder+filenm+str(num)+ext)):
+#                shutil.move(filename, "%s/"%folder+filenm+str(num)+ext)
+#                break
 
 def writeBBcode(goodFilename, upUrl, info):
     #TODO: create folder to hold BBcode and delete as you upload
     #create file to hold the BBcode and file details
-    if (os.path.exists(goodFilename[:-4]+".txt")):
+    if (os.path.exists(bbcodedir+goodFilename[:-4]+".txt")):
         for num in range(1000):
-            if (not os.path.exists(goodFilename[:-4]+str(num)+".txt")):
+            if (not os.path.exists(bbcodedir+goodFilename[:-4]+str(num)+".txt")):
                 goodFilename = goodFilename[:-4]+str(num)+".txt"
                 break
     try:
-        with open(goodFilename[:-4]+".txt", "w") as bbOut: 
+        with open(bbcodedir+goodFilename[:-4]+".txt", "w") as bbOut: 
             bbOut.write(generateBBCode(upUrl, info,goodFilename))
     except TypeError:
-        with open(goodFilename[:-4]+".txt", "w") as bbOut: 
+        with open(bbcodedir+goodFilename[:-4]+".txt", "w") as bbOut: 
             bbOut.write(unicode(generateBBCode(upUrl, info, goodFilename), "utf-8"))
 
-def isdupe(title):
-    import ast
+def log(title, post_url):
+    ''''Log uploaded books to file.'''
+    with open((ezbookup_folder+'/log.txt'), 'a+') as f:
+        f.write('{0}, {1}'.format(title, post_url))
 
-    #load book index into tuple of (title, url)
-    #TODO: Need an efficient, fast way to do this, levenstein distance included.
-    with open('books_index.txt', 'r') as f:
-        #read line by line
-        for line in f:
-            book_tuple = ast.literal_eval(line)
-            if title in book_tuple[0]:
-                return True
-        return False
+def isdupe(title):
+    def dupe_search(title, path)
+        import ast
+
+        #os.chdir(ezbookup_folder)
+
+        #load book index into tuple of (title, url)
+        #TODO: Need an efficient, fast way to find dupes, levenstein distance included.
+        with open(path, 'r') as f:
+            #read line by line
+            for line in f:
+                book_tuple = ast.literal_eval(line)
+                if title in book_tuple[0]:
+                    return book_tuple
+            return False
+
+    #if not path:
+    #    path = (ezbookup_folder+'/books_index.txt')
+
+    return dupe_search(title, (ezbookup_folder+'/books_index.txt')) or\
+           dupe_search(title, (ezbookup_folder+'/log.txt'))
 
 @with_goto
 def process_file(filename):
@@ -315,13 +337,16 @@ def process_file(filename):
 
         #Uploading the file to http://upload.evilzone.org
         print ("Uploading as '%s'...\n" % goodFilename)
-        upUrl = ezup.fileupload(goodFilename)
+        upload_url = ezup.fileupload(goodFilename)
 
         #make Uploaded dir to keep files that have been uploaded and processed.
         #copyfiles(goodFilename, 'Uploaded')
                
         #write BBcode
-        writeBBcode(goodFilename, upUrl, info)
+        writeBBcode(goodFilename, upload_url, info)
+
+        #log that all went well with this one. EZ gots it.
+        log(info['title']or filename, post_url or upload_url)
     else:
         label .isbn_no_info
         #This is for the books without ISBN detected.
@@ -329,23 +354,3 @@ def process_file(filename):
         print ("Didn't find ISBN in file '%s'\n" % goodFilename)
 
 
-def main():
-    cookies = login('', '')
-    index = threading.Thread(target=getBooksIndex)
-    index.start()
-
-    for filename in os.listdir("."):
-        filenm, ext = os.path.splitext(filename)
-        if ext in extensions:
-            if filename.endswith(".pdf")):
-                if not index.isAlive() and not isdupe(filename):
-                    process_file(filename)
-
-        #file not pdf
-        else:
-            #TODO: insert success conversion check here and in function return parameters, true/false
-            convert2pdf(filename)
-            process_file(filename)
-
-if __name__ == '__main__':
-    main()
