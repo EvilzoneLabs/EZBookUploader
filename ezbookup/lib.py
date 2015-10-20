@@ -206,7 +206,7 @@ def generateBBCode(upUrl, info, filename):
 def getBooksIndex():
     secInAweek = 604800
     indexfile = ezbookup_folder+'books_index.txt'
-    #this nonsense here is to notgrab the index everytime, thewormkill doesn't update it that much.
+    #this nonsense here is to not grab the index everytime, thewormkill doesn't update it that much.
     #feel free to coment out this try block if you need it updated everytime.
     try:
         with open(indexfile, 'r') as f:
@@ -247,7 +247,6 @@ def getBooksIndex():
 def convert2pdf(filename):
     #http://manual.calibre-ebook.com/cli/ebook-convert.html
     filenm, ext = os.path.splitext(filename)
-    #if ext not '.pdf'
     try:
         process = Popen(['ebook-convert', filename, filenm+'.pdf'], stdout=PIPE, stderr=PIPE)
         stdout, stderr = process.communicate()
@@ -255,18 +254,6 @@ def convert2pdf(filename):
         print('Error: Calibre\'s ebook-converter not installed.' \
                 ' Please install Calibre and continue.',file=sys.stderr)
         sys.exit()
-
-#def copyfiles(filename,folder):
-#    if not os.path.exists(folder):
-#        os.makedir(folder) 
-#    try:
-#        shutil.move(filename, "%s/"%folder)
-#    except:
-#        filenm, ext = os.path.splitext(filename)
-#        for num in range(1000):
-#            if (not os.path.exists("%/"%folder+filenm+str(num)+ext)):
-#                shutil.move(filename, "%s/"%folder+filenm+str(num)+ext)
-#                break
 
 def writeBBcode(goodFilename, upUrl, info):
     #TODO: create folder to hold BBcode and delete as you upload
@@ -289,10 +276,9 @@ def log(title, post_url):
         f.write('{0}, {1}'.format(title, post_url))
 
 def isdupe(title):
+    '''Check for duplicate files in index and/or logs of books already posted by you'''
     def dupe_search(title, path)
         import ast
-
-        #os.chdir(ezbookup_folder)
 
         #load book index into tuple of (title, url)
         #TODO: Need an efficient, fast way to find dupes, levenstein distance included.
@@ -304,11 +290,14 @@ def isdupe(title):
                     return book_tuple
             return False
 
-    #if not path:
-    #    path = (ezbookup_folder+'/books_index.txt')
-
     return dupe_search(title, (ezbookup_folder+'/books_index.txt')) or\
            dupe_search(title, (ezbookup_folder+'/log.txt'))
+
+def post():
+    #look through bbcode dir
+    #for file, grab title, and bbcode, post to EZ
+    #remove file
+    pass
 
 @with_goto
 def process_file(filename):

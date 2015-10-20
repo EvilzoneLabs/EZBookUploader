@@ -11,6 +11,8 @@ def is_valid(parser,arg):
     else:
         return arg
 
+def process
+
 def main(args):
     parser = argparse.ArgumentParser(description='Process, upload and Post books on Evilzone Forum.')
     parser.add_argument("-f", "--file", dest="filename", required=False,
@@ -26,7 +28,7 @@ def main(args):
     index = threading.Thread(target=getBooksIndex)
     index.start()
 
-    for filename in os.listdir("."):
+    def process(filename):
         filenm, ext = os.path.splitext(filename)
         if ext in extensions:
             if filename.endswith(".pdf")):
@@ -41,6 +43,12 @@ def main(args):
                 #TODO: insert success conversion check here and in function return parameters, true/false
                 convert2pdf(filename)
                 process_file(filename)
+
+    if args.filename:
+        process(args.filename)
+    elif args.folder:
+        for filename in os.listdir(args.folder):
+        
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
