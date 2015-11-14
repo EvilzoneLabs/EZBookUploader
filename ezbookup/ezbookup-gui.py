@@ -1,6 +1,9 @@
 #!/usr/bin/python
 from gi.repository import Gtk
 import os
+from lib import process_file, convert2pdf, login, isdupe, log, login
+
+LOGGEDIN = False
 
 class QuitDialog(Gtk.Dialog):
     def __init__(self, parent):
@@ -12,14 +15,78 @@ class QuitDialog(Gtk.Dialog):
         box.add(label)
         self.show_all()
 
+class LoginDialog(Gtk.Dialog):
+    def __init__(self, parent):
+        Gtk.Dialog.__init__(self, "Evilzone Login", parent, 0,(Gtk.STOCK_CANCEL, \
+                         Gtk.ResponseType.CANCEL,Gtk.STOCK_OK, Gtk.ResponseType.OK))
+        self.set_default_size(250, 200)
+        label = Gtk.Label("Enter Evilzone.org Login Credentials.\nPress \'Cancel\' to Exit or \'Ok\' to login.")
+        vbox = self.get_content_area()
+        vbox.pack_start(label, True, True, 0)
+
+        #create horizontal box to hold input for username
+        hbox1 = Gtk.Box(spacing=6)
+        #add horizontal box to vertical box
+        vbox.pack_start(hbox1,True, False, 6)
+
+        userlabel = Gtk.label('Enter Username:')
+        hbox1.pack_start(userlabel, True, True, 0)
+
+        #Lets get the username
+        self.userentry = Gtk.Entry()
+        hbox1.pack_start(self.userentry, True, True, 0)
+
+        #create horizontal box to hold input for password
+        hbox2 = Gtk.Box(spacing=6)
+        #add horizontal box to vertical box
+        vbox.pack_start(hbox2,True, False, 6)
+
+        passlabel = Gtk.label('Enter Password:')
+        hbox2.pack_start(userlabel, True, True, 0)
+
+        #Lets get the password in password mode/invisible mode
+        self.passentry = Gtk.Entry()
+        slef.passentry.set_visibility(False)
+        hbox2.pack_start(self.passentry, True, True, 0)
+
+        hbox3 = Gtk.Box(spacing=6)
+        vbox.pack_start(hbox3, True, True, 0)
+
+        self.loginbutton = Gtk.ToggleButton("Login")
+        self.loginbutton.connect("toggled", self.slogin)
+        self.loginbutton.set_active(False)
+        vbox.pack_start(self.loginbutton, True, True, 0)
+
+        self.spinner = Gtk.Spinner()
+        vbox.pack_start(self.spinner, True, True, 0)
+
+        self.show_all()
+
+    def slogin(self, widget):
+        if button.get_active():
+            self.spinner.start()
+            self.loginbutton.set_label("Logging in...")
+
+            username = self.userentry.get_text()
+            password = self.passentry.get_text()
+
+            if username and password:
+                ezck = login(username, password)
+                if ezck:
+                    self.spinner.stop()
+                    self.loginbutton.set_label('Logged in.')
+                    LOGGEDIN = True
+                    self.destroy()
+        else:
+            self.spinner.stop()
+            self.button.set_label("Login")
+
 class EvilWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Evilzone Ebook Uploader")
         self.set_size_request(600, 350)
         self.set_icon_from_file('favicon.png')
         self.set_border_width(10)
-#        self.connect("delete-event", Gtk.main_quit)
-#        self.connect("delete-event", self.quit)
 
         #create a vertical box to hold it all
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
@@ -192,11 +259,19 @@ class EvilWindow(Gtk.Window):
         if response == Gtk.ResponseType.OK:
             Gtk.main_quit
             sys.exit()#for some reason the window gets destroyed but program doesn't quit
-        else:
+        elif response == Gtk.ResponseType.CANCEL:
             pass
-        quit.destroy()
+        quit.hide()
+
+    def login(self):
+        Login = LoginDialog(self)
+        response = Login.run()
+        #if response = Gtk.ResponseType.OK:
+
 
 win = EvilWindow()
-win.connect("delete-event", win.quit)
+win.login()
+#win.connect("delete-event", win.quit)
+win.connect("delete-event", Gtk.main_quit)
 win.show_all()
 Gtk.main()

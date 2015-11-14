@@ -17,3 +17,4 @@ def hide(file_name):
                                                         FILE_ATTRIBUTE_HIDDEN)
         if not ret: # There was an error.
             raise ctypes.WinError()
+    return file_name
