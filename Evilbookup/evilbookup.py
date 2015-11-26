@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import os
 import threading
 import sys
@@ -27,12 +29,10 @@ def main(arg):
     args = parser.parse_args()
 
     cookies = login('nafuti', 'Emmanuel1')
-    extensions = ['.pdf', '.epub', 'mobi', 'chm']
-    #index = threading.Thread(target=getBooksIndex)
-    #index.start()
+    extensions = ['.pdf', '.epub', '.mobi', '.chm']
     getBooksIndex()
     try:
-        with open(os.path.join(lib.ezbookup_folder, 'log.json'), 'r') as f:
+        with open(os.path.join(lib.evilbookup_folder, 'log.json'), 'r') as f:
            lib.booklog = json.load(f)
     except ValueError as e:
         pass
@@ -41,7 +41,7 @@ def main(arg):
         filenm, ext = os.path.splitext(filename)
         if ext in extensions:
             if filename.endswith(".pdf"):
-                dupe = isdupe(filename)
+                dupe = isdupe(filename);print(dupe);exit()
                 if not dupe:
                     process_file(filename)
                 else:
@@ -58,13 +58,18 @@ def main(arg):
         for filename in os.listdir(args.folder):
             process(filename)
     else:
+        print("\nNo filename or folder specified, checking in current directory...")
         files = os.listdir('.')
         if not files:
-            print('NO file or folder specified and NONE found in'
-                  +' current directory. Please specify a file or folder to process books from.')
+            print('No BOOK found in current directory. Please specify a file or folder to process books from.')
             sys.exit()
-        for filename in os.listdir('.'):
+        for filename in files:
             process(filename)
 
+    #dump the log back to file, prolly updated or not
+    with open(os.path.join(lib.evilbookup_folder, 'log.json'), "w") as f:
+        json.dump(lib.booklog, f, indent=4)
+        
+    print("Books processing is DONE, please review the {} folder for the BBcode to post to Evilzone.org".format(lib.bbcodedir))
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

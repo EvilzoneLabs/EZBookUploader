@@ -6,7 +6,8 @@
 # Description:
 #   Automatic ebook (pdf) uploader. Converts first 10 pages of the PDF
 #   into text and extracts the ISBN, by which it then extracts more info
-#   from worldcat.org, uploads the file to EZ and generates BBCode.
+#   from worldcat.org or amazon, uploads the file to EZ and generates BBCode.
+#   if the file isn't pdf, it tries to convert it to pdf then continues
 from __future__ import print_function
 
 import re
@@ -29,16 +30,18 @@ from hide import hide
 AMAZON_URL = 'http://www.amazon.com/gp/product/'
 ezup = evilupload()
 br = RoboBrowser(history=True, user_agent='Mozilla/5.0 (Windows NT 6.1; rv:30.0) Gecko/20100101 Firefox/30.0')
-mbr = mechanize.Browser()
+mbr = mechanize.Browser()#TODO:turn all instances of mechanize to RoboBrowser
 
 booklog = []
-ezbookup_folder = os.path.join(os.path.expanduser('~'), hide('ezbookup'))
-bbcodedir = ezbookup_folder + 'bbcode'
-if not os.path.isdir(ezbookup_folder):
-    os.makedirs(ezbookup_folder)
+evilbookup_folder = os.path.join(os.path.expanduser('~'), 'evilbookup')  #hide('evilbookup')
+bbcodedir = os.path.join(evilbookup_folder, 'bbcode')
+#if not os.path.isdir(evilbookup_folder):
+#    os.makedirs(evilbookup_folder)
+#this makes all the directories we need.
+if not os.path.isdir(bbcodedir):
     os.makedirs(bbcodedir)
 #create log file if not exist
-open(os.path.join(ezbookup_folder, 'log.json'), 'a').close()
+open(os.path.join(evilbookup_folder, 'log.json'), 'a').close()
 
 def login(name=None, passwd=None):
     ''''Logs into https://evilzone.org and returns a working cookies'''
@@ -172,14 +175,14 @@ def amazonInfo(isbn):
 #    print('Collecting Book info for ISBN: {} from amazon'.format(isbn))
     image = review = ''
     results  = {"title":"", "review":review, "image":image}
-    url = 'http://www.amazon.com/gp/product/' + str(isbn)
+    url = AMAZON_URL + str(isbn)
     br.open(url)
     html = br.response.content#;print(html);exit()
     
     try:
-        tpat = re.compile(r'<span id="productTitle" class="a-size-extra-large">(.*?)</span>')
-        results['title'] = tpat.findall(html)[0];print(result['title'])
-        
+        tpat = re.compile(r'<span id="productTitle" class="a-size-large">(.*?)</span>')
+        results['title'] = tpat.findall(html)[0]
+    
         ipat = re.compile(r'data-a-dynamic-image="{&quot;(.*?)&quot;')
         results['image'] = ipat.findall(html)[0]
 
@@ -211,14 +214,9 @@ def sanitizeFilename(filename):
     newFilename = newFilename.replace(" ", "_")+".pdf"
     return newFilename
 
-def generateBBCode(upUrl, info, filename):
-    if (info["review"] is ""): info["review"] = "No review available :/"
-    return "%s\n\n[img]%s[/img]\n\n[quote]%s[/quote]\n\nDownload: [url=%s]%s[/url]"\
-                    % (info["title"], info["image"], info["review"], upUrl, filename)
-
 def getBooksIndex():
     #secInAweek = 604800
-    indexfile = os.path.join(ezbookup_folder, 'books_index.json')
+    indexfile = os.path.join(evilbookup_folder, 'books_index.json')
 
     #this nonsense here is to not grab the index everytime, thewormkill doesn't update it that much.
     #feel free to coment out this try block if you need it updated everytime.
@@ -239,7 +237,7 @@ def getBooksIndex():
     if os.path.exists(indexfile):
         os.remove(indexfile)
 
-    #with open(os.path.join(ezbookup_folder, 'books_index.json'), 'w+') as f:
+    #with open(os.path.join(evilbookup_folder, 'books_index.json'), 'w+') as f:
     #    f.write('last update of Book Index, {}\n'.format(str(time.mktime(time.localtime()))))
 
     index = []
@@ -256,7 +254,7 @@ def getBooksIndex():
                url == 'https://evilzone.org/wiki//index.php?title=The_big_ebook_index&oldid=':
                 continue
             index.append({'title':link.text, 'url':url})
-    with open(os.path.join(ezbookup_folder, 'books_index.json'), 'a+') as f:
+    with open(os.path.join(evilbookup_folder, 'books_index.json'), 'a+') as f:
         json.dump(index, f)
     print('Updated your local copy of the Evilzone Book Index.')
 
@@ -272,6 +270,11 @@ def convert2pdf(filename):
         print('Error: Calibre\'s ebook-converter not installed.' \
                 ' Please install Calibre and continue.',file=sys.stderr)
         sys.exit()
+
+def generateBBCode(upUrl, info, filename):
+    if (info["review"] is ""): info["review"] = "No review available :/"
+    return "%s\n\n[img]%s[/img]\n\n[quote]%s[/quote]\n\nDownload: [url=%s]%s[/url]"\
+                    % (info["title"], info["image"], info["review"], upUrl, filename)
 
 def writeBBcode(goodFilename, upUrl, info):
     #TODO: create folder to hold BBcode and delete as you upload
@@ -290,7 +293,7 @@ def writeBBcode(goodFilename, upUrl, info):
 
 def log(title, post_url):
     ''''Log uploaded books to file.'''
-    #with open((os.path.join(ezbookup_folder, 'log.json')), 'a+') as f:
+    #with open((os.path.join(evilbookup_folder, 'log.json')), 'a+') as f:
     #    f.write('{0}, {1}'.format(title, post_url))
     booklog.append({'title':title, 'url':post_url})
 
@@ -298,7 +301,7 @@ def isdupe(title):
     '''Check for duplicate files in index and/or logs of books already posted by you'''
     def dupe_search(title, path):
 
-        #load book index into tuple of (title, url)
+        #load book index into json of (title, url)
         #TODO: Need an efficient, fast way to find dupes, levenstein distance included.
         books = []
         with open(path, 'r') as f:
@@ -315,13 +318,12 @@ def isdupe(title):
 
 
         for book in books:
-            if title in book['title']:
-                return book
+            if book['title'].lower().find(title.lower()) != -1:
+                return True
         return False
-
-    return dupe_search(title, (os.path.join(ezbookup_folder, 'books_index.json'))) or\
-           dupe_search(title, (os.path.join(ezbookup_folder, 'log.json')))
-
+    return dupe_search(title, (os.path.join(evilbookup_folder, 'books_index.json'))) or\
+           dupe_search(title, (os.path.join(evilbookup_folder, 'log.json')))
+#TODO
 def post():
     #look through bbcode dir
     #for file, grab title, and bbcode, post to EZ
@@ -342,12 +344,12 @@ def process_file(filename):
         os.rename(filename, goodFilename)
         print ("Found ISBN: %s, extracting info..." % isbn)
 
-        print('Getting Book Details from Worldcat....')
-        info = worldcatInfo(isbn)
+        #print('Getting Book Details from Worldcat....')
+        #info = worldcatInfo(isbn)
                 
-        if info['review'] is '':
-            print('Getting book details from Amazon...')
-            info = amazonInfo(isbn)
+        #if info['review'] is '':
+        print('Getting book details from Amazon...')
+        info = amazonInfo(isbn)
 
         #have failed to get any info on this book, jump to No_ISBN
         #this is metaprogramming not native to python
