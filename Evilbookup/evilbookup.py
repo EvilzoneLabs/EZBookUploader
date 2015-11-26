@@ -6,7 +6,7 @@ import sys
 import argparse
 import json
 
-from lib import process_file, convert2pdf, login, isdupe, log, login, getBooksIndex
+from lib import process_file, convert2pdf, login, log, login, getBooksIndex
 import lib
 
 def is_valid(parser,arg):
@@ -28,7 +28,7 @@ def main(arg):
 	
     args = parser.parse_args()
 
-    cookies = login('nafuti', 'Emmanuel1')
+    cookies = login()
     extensions = ['.pdf', '.epub', '.mobi', '.chm']
     getBooksIndex()
     try:
@@ -41,11 +41,14 @@ def main(arg):
         filenm, ext = os.path.splitext(filename)
         if ext in extensions:
             if filename.endswith(".pdf"):
-                dupe = isdupe(filename);print(dupe);exit()
-                if not dupe:
-                    process_file(filename)
-                else:
-                    print('\'{0}\' already exists as \'{1}\' @ {2} Skipping...'.format(filename, dupe[0], dupe[1]))
+                #moved this check to lib.process_file(), because filesystem file name (might)
+                # differs from real book publication name hence dupe fail positives.
+                #dupe = isdupe(filename);print(dupe);exit()
+                #if not dupe:
+                #    process_file(filename)
+                #else:
+                #    print('\'{0}\' already exists as \'{1}\' @ {2} Skipping...'.format(filename, dupe[0], dupe[1]))
+                process_file(filename)
             #file not pdf
             else:
                 #TODO: insert success conversion check here and in function return parameters, true/false
@@ -60,11 +63,16 @@ def main(arg):
     else:
         print("\nNo filename or folder specified, checking in current directory...")
         files = os.listdir('.')
-        if not files:
+        found_book = False
+        for filename in files:
+            filenm, ext = os.path.splitext(filename)
+            if ext in extensions:
+                found_book = True				
+                process(filename)
+        if not found_book:
             print('No BOOK found in current directory. Please specify a file or folder to process books from.')
             sys.exit()
-        for filename in files:
-            process(filename)
+			        
 
     #dump the log back to file, prolly updated or not
     with open(os.path.join(lib.evilbookup_folder, 'log.json'), "w") as f:

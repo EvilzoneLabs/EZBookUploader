@@ -35,11 +35,11 @@ mbr = mechanize.Browser()#TODO:turn all instances of mechanize to RoboBrowser
 booklog = []
 evilbookup_folder = os.path.join(os.path.expanduser('~'), 'evilbookup')  #hide('evilbookup')
 bbcodedir = os.path.join(evilbookup_folder, 'bbcode')
-#if not os.path.isdir(evilbookup_folder):
-#    os.makedirs(evilbookup_folder)
-#this makes all the directories we need.
+
+#this makes all the directories we need. Including the Evilbookup folder.
 if not os.path.isdir(bbcodedir):
     os.makedirs(bbcodedir)
+
 #create log file if not exist
 open(os.path.join(evilbookup_folder, 'log.json'), 'a').close()
 
@@ -95,7 +95,7 @@ def worldcatInfo(isbn):
     except Exception as e:
         print('Error in worldcat: %s'%e)
         return result
-    # with open("debug.txt", "w") as a: a.write(resp)
+
     title = re.search("<h1 class=\"title\">.+?</h1>", resp)
     if title:
         result["title"] = title.group(0).replace("<h1 class=\"title\">", "").replace("</h1>", "")
@@ -177,7 +177,7 @@ def amazonInfo(isbn):
     results  = {"title":"", "review":review, "image":image}
     url = AMAZON_URL + str(isbn)
     br.open(url)
-    html = br.response.content#;print(html);exit()
+    html = br.response.content
     
     try:
         tpat = re.compile(r'<span id="productTitle" class="a-size-large">(.*?)</span>')
@@ -193,7 +193,7 @@ def amazonInfo(isbn):
         return results
     except IndexError as e:
         #no results for this ISBN
-        print('IndexError in amazon')
+        #print('IndexError in amazon')
         return results    
 
 def html2bbcode(html):
@@ -204,6 +204,7 @@ def html2bbcode(html):
 
 def sanitizeFilename(filename):
     '''Cleans up a filename to remove unallowed characters'''
+    #This function is momentarily disabled till original author says otherwise.
     allowedSymbols = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0987654321.-_ ()[]+,~"
     newFilename = filename.split(".")[0]
     for symbol in filename:
@@ -220,6 +221,7 @@ def getBooksIndex():
 
     #this nonsense here is to not grab the index everytime, thewormkill doesn't update it that much.
     #feel free to coment out this try block if you need it updated everytime.
+    #i wouldn't uncomment it till it works well.
     #try:
     #    with open(indexfile, 'r') as f:
     #        last_update = ast.literal_eval(f.readline().strip())
@@ -277,7 +279,7 @@ def generateBBCode(upUrl, info, filename):
                     % (info["title"], info["image"], info["review"], upUrl, filename)
 
 def writeBBcode(goodFilename, upUrl, info):
-    #TODO: create folder to hold BBcode and delete as you upload
+    #TODO: create folder to hold BBcode and delete as you post on Forum
     #create file to hold the BBcode and file details
     if (os.path.exists(bbcodedir+goodFilename[:-4]+".txt")):
         for num in range(1000):
@@ -293,8 +295,6 @@ def writeBBcode(goodFilename, upUrl, info):
 
 def log(title, post_url):
     ''''Log uploaded books to file.'''
-    #with open((os.path.join(evilbookup_folder, 'log.json')), 'a+') as f:
-    #    f.write('{0}, {1}'.format(title, post_url))
     booklog.append({'title':title, 'url':post_url})
 
 def isdupe(title):
@@ -302,15 +302,8 @@ def isdupe(title):
     def dupe_search(title, path):
 
         #load book index into json of (title, url)
-        #TODO: Need an efficient, fast way to find dupes, levenstein distance included.
         books = []
         with open(path, 'r') as f:
-            #read line by line
-            #for line in f:
-            #    book_tuple = ast.literal_eval(line.strip())
-            #    if title in book_tuple[0]:
-            #        return book_tuple
-            #return False
             try:
                 books = json.load(f)
             except ValueError as e:
@@ -319,7 +312,7 @@ def isdupe(title):
 
         for book in books:
             if book['title'].lower().find(title.lower()) != -1:
-                return True
+                return book
         return False
     return dupe_search(title, (os.path.join(evilbookup_folder, 'books_index.json'))) or\
            dupe_search(title, (os.path.join(evilbookup_folder, 'log.json')))
@@ -340,16 +333,17 @@ def process_file(filename):
 
     if (len(isbns) > 0):
         isbn = clean_isbn(isbns[0])
-        goodFilename = sanitizeFilename(filename)
-        os.rename(filename, goodFilename)
+        #sanitizeFilename() is disabled till i have a talk with kulverstukas
+        goodFilename = filename #sanitizeFilename(filename)
+        #os.rename(filename, goodFilename)
         print ("Found ISBN: %s, extracting info..." % isbn)
 
-        #print('Getting Book Details from Worldcat....')
-        #info = worldcatInfo(isbn)
-                
-        #if info['review'] is '':
         print('Getting book details from Amazon...')
         info = amazonInfo(isbn)
+                
+        if info['review'] is '':
+            print('Getting Book Details from Worldcat....')
+            info = worldcatInfo(isbn)
 
         #have failed to get any info on this book, jump to No_ISBN
         #this is metaprogramming not native to python
@@ -357,14 +351,16 @@ def process_file(filename):
             if info['review'] is '':
                 goto .isbn_no_info
         except KeyError:
-			goto .isbn_no_info        
+			goto .isbn_no_info
+        
+        dupe = isdupe(info['title'])
+        if dupe: 
+            print('\'{0}\' already exists as \'{1}\' @ \'{2}\'. Skipping...'.format(filename, dupe['title'], dupe['url']))
+            return			
 
         #Uploading the file to http://upload.evilzone.org
         print ("Uploading as '%s'...\n" % goodFilename)
-        upload_url = 'http://evilzone.org'#ezup.fileupload(goodFilename)
-
-        #make Uploaded dir to keep files that have been uploaded and processed.
-        #copyfiles(goodFilename, 'Uploaded')
+        upload_url = ezup.fileupload(goodFilename)
                
         #write BBcode
         writeBBcode(goodFilename, upload_url, info)
@@ -377,5 +373,4 @@ def process_file(filename):
     else:
         label .isbn_no_info
         #This is for the books without ISBN detected.
-        #copyfiles(goodFilename, 'NoISBN')
         print ("Didn't find ISBN or any info on file: '%s'\n" % goodFilename)
