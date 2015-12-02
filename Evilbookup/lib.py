@@ -265,9 +265,11 @@ def convert2pdf(filename):
 
     print('Converting {} to PDF'.format(path))
     filenm, ext = os.path.splitext(filename)
+    pdfname = filenm+'.pdf'
     try:
-        process = Popen(['ebook-convert', filename, filenm+'.pdf'], stdout=PIPE, stderr=PIPE)
+        process = Popen(['ebook-convert', filename, pdfname], stdout=PIPE, stderr=PIPE)
         stdout, stderr = process.communicate()
+        return pdfname
     except OSError:
         print('Error: Calibre\'s ebook-converter not installed.' \
                 ' Please install Calibre and continue.',file=sys.stderr)
@@ -351,7 +353,7 @@ def process_file(filename):
             if info['review'] is '':
                 goto .isbn_no_info
         except KeyError:
-			goto .isbn_no_info
+            goto .isbn_no_info
         
         dupe = isdupe(info['title'])
         if dupe: 

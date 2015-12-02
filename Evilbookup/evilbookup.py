@@ -1,3 +1,14 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Authors: Kulverstukas, kenjoe41
+# Date: 2015.10.08
+# Website: http://Evilzone.org; http://9v.lt/blog
+# Description:
+#   Automatic ebook (pdf) uploader. Converts first 10 pages of the PDF
+#   into text and extracts the ISBN, by which it then extracts more info
+#   from worldcat.org or amazon, uploads the file to EZ and generates BBCode.
+#   if the file isn't pdf, it tries to convert it to pdf then continues
+
 from __future__ import print_function
 
 import os
@@ -52,8 +63,8 @@ def main(arg):
             #file not pdf
             else:
                 #TODO: insert success conversion check here and in function return parameters, true/false
-                convert2pdf(filename)
-                process_file(filename)
+                newfilename = convert2pdf(filename)
+                process_file(newfilename)
 
     if args.filename:
         process(args.filename)
