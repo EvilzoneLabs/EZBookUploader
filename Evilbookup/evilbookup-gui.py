@@ -29,7 +29,7 @@ class LoginDialog(Gtk.Dialog):
         #add horizontal box to vertical box
         vbox.pack_start(hbox1,True, False, 6)
 
-        userlabel = Gtk.label('Enter Username:')
+        userlabel = Gtk.Label('Enter Username:')
         hbox1.pack_start(userlabel, True, True, 0)
 
         #Lets get the username
@@ -41,12 +41,12 @@ class LoginDialog(Gtk.Dialog):
         #add horizontal box to vertical box
         vbox.pack_start(hbox2,True, False, 6)
 
-        passlabel = Gtk.label('Enter Password:')
+        passlabel = Gtk.Label('Enter Password:')
         hbox2.pack_start(userlabel, True, True, 0)
 
         #Lets get the password in password mode/invisible mode
         self.passentry = Gtk.Entry()
-        slef.passentry.set_visibility(False)
+        self.passentry.set_visibility(False)
         hbox2.pack_start(self.passentry, True, True, 0)
 
         hbox3 = Gtk.Box(spacing=6)
@@ -63,7 +63,7 @@ class LoginDialog(Gtk.Dialog):
         self.show_all()
 
     def slogin(self, widget):
-        if button.get_active():
+        if widget.get_active():
             self.spinner.start()
             self.loginbutton.set_label("Logging in...")
 

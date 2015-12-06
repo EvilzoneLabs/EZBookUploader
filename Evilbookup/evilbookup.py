@@ -63,7 +63,7 @@ def main(arg):
             #file not pdf
             else:
                 #TODO: insert success conversion check here and in function return parameters, true/false
-                newfilename = convert2pdf(filename)
+                newfilename = convert2pdf(filename)   #change this return value to a path.
                 process_file(newfilename)
 
     if args.filename:

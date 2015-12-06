@@ -1,7 +1,7 @@
 #!/usr/bin/python
 """Process, upload and post ebooks on Evilzone.org"""
 
-from ezbookup import VERSION
+from Evilbookup import VERSION
 from distutils.core import setup
 import platform
 
@@ -11,18 +11,17 @@ if WIN32:
     import py2exe
 
 setup_kwargs = dict(
-    name="ezbookup",
+    name="evilbookup",
     version=VERSION,
     description="Process, upload and post ebooks on Evilzone.org",
     author="kenjoe41",
     author_email="kenjoe41@evilzone.org",
     url="https:/evilzone.org",
     packages=[  
-        "ezbookup/",
+        "Evilbookup/",
     ],
     scripts=[
-      "bin/ezbookup",
-      "bin/ezbookup-gui",
+      "bin/evilbookup",
 	  ],
     license="GNU Public License v3.0",
     long_description=" ".join(__doc__.strip().splitlines()),
@@ -42,12 +41,5 @@ setup_kwargs = dict(
         }
     }    
 )
-
-if WIN32:
-    setup_kwargs["windows"] = [
-      {
-        "script": "bin/ezbookup-gui",
-      },
-    ]
     
 setup(**setup_kwargs)

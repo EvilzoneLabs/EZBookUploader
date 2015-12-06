@@ -263,7 +263,7 @@ def getBooksIndex():
 def convert2pdf(filename):
     #http://manual.calibre-ebook.com/cli/ebook-convert.html
 
-    print('Converting {} to PDF'.format(path))
+    print('Converting {} to PDF'.format(filename))
     filenm, ext = os.path.splitext(filename)
     pdfname = filenm+'.pdf'
     try:
